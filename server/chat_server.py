@@ -25,17 +25,24 @@ async def accept_connection(server_socket):
         try:
             client_socket, addr = server_socket.accept()
             client_name = client_socket.recv(1024).decode().strip()
-            clients[client_name] = client_socket
+
+            if client_name in clients.keys():
+                client_socket.send(b'User with this name already exists')
+                client_socket.close()
+                continue
+
+            else:
+                clients[client_name] = client_socket
 
             print(f'[INFO] - {client_name} connected\n')
 
-            loop.create_task(receive_massage(client_name))
+            loop.create_task(receive_message(client_name))
 
         except BlockingIOError:
             await asyncio.sleep(0.00)
 
 
-async def send_massage(request, sender):
+async def send_message(request, sender):
     try:
         recipient = re.search(r'^(\w+)', request).group(0)
     except AttributeError:
@@ -49,7 +56,7 @@ async def send_massage(request, sender):
         pass
 
 
-async def receive_massage(client_name):
+async def receive_message(client_name):
     client_socket = clients[client_name]
     client_socket.setblocking(False)
 
@@ -63,7 +70,7 @@ async def receive_massage(client_name):
                 request = request.decode().strip()
                 print(f'[{client_name}] - {request}')
 
-                asyncio.get_running_loop().create_task(send_massage(request, client_name))
+                asyncio.get_running_loop().create_task(send_message(request, client_name))
 
             else:
                 print(f'[INFO] - {client_name} disconnected\n')
